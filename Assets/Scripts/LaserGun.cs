@@ -1,17 +1,21 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Valve.VR;
 
 public class LaserGun : MonoBehaviour {
 
-    [SerializeField] private Transform attachmentPoint;
     [SerializeField] private float range = 50.0f;
 
     private ParticleSystem laserParticles;
-    private bool isLaserOn = false;
+    private bool propulsion = false;
+    [SerializeField] private SteamVR_Action_Boolean botao = SteamVR_Input.GetAction<SteamVR_Action_Boolean>("InteractUI");
+    [SerializeField] private SteamVR_Action_Boolean grip = SteamVR_Input.GetAction<SteamVR_Action_Boolean>("GrabGrip");
+    SteamVR_Behaviour_Pose trackedObj;
 
     void Start() {
         laserParticles = GetComponent<ParticleSystem>();
+        trackedObj = GetComponent<SteamVR_Behaviour_Pose>();
     }
 
     void Raycast() {
@@ -20,30 +24,24 @@ public class LaserGun : MonoBehaviour {
         if (Physics.Raycast(transform.position, transform.forward, out hit, range)) {
             Destructable destructable = hit.collider.gameObject.GetComponent<Destructable>();
             if (destructable != null) {
-                destructable.DoDamage();
+                destructable.DoDamage(transform.position, propulsion);
             }
         }
     }
 
-    void MoveGun() {
-        // Test if the player is grounded
-        float mouseY = Input.GetAxis("Mouse Y");
-        transform.Rotate(Vector3.right * -mouseY);
-    }
+    void FixedUpdate() {
 
-    void Update() {
-        MoveGun();
-
-        if (Input.GetMouseButtonDown(1)) {
-            if (isLaserOn) {
-                laserParticles.Clear();
-                laserParticles.Pause();
-                isLaserOn = false;
-            } else {
-                laserParticles.Play();
-                isLaserOn = true;
-            }
+        if (botao.GetState(trackedObj.inputSource)) {
+            laserParticles.startColor = propulsion ? Color.red : Color.blue;
+            laserParticles.Play();
             Raycast();
+        } else {
+            laserParticles.Clear();
+            laserParticles.Pause();
+        }
+
+        if (grip.GetStateDown(trackedObj.inputSource)) {
+            propulsion = !propulsion;
         }
     }
 
